@@ -1,203 +1,174 @@
-import { Search, BookOpen, Code, Cpu, Layers, Sparkles } from 'lucide-react';
-import { useState } from 'react';
-interface BlogPost {
-  id: number;
-  title: string;
-  excerpt: string;
-  category: 'AI/ML' | 'Programming' | 'Dev' | 'Misc';
-  date: string;
-  readTime: string;
-  image: string;
+import React, { useState, useMemo } from 'react';
+import Navbar from '../components/navbar';
+import Footer from '../components/footer';
+import NotebookViewer from '../components/NotebookViewer';
+
+const FolderIcon: React.FC = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto mb-4 text-purple-400">
+    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+  </svg>
+);
+
+const FileIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto mb-4 text-slate-400">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline>
+    </svg>
+);
+
+const ChevronRightIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-slate-400">
+        <path d="m9 18 6-6-6-6"></path>
+    </svg>
+);
+
+// --- TYPESCRIPT INTERFACES ---
+interface BlogStructure {
+  [key: string]: BlogStructure | null;
 }
 
-const BlogHomepage = () => {
-  const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState('');
+interface BreadcrumbsProps {
+  path: string[];
+  onNavigate: (index: number) => void;
+}
 
-  const categories = [
-    { name: 'All', icon: Sparkles, color: 'text-purple-600' },
-    { name: 'AI/ML', icon: Cpu, color: 'text-blue-600' },
-    { name: 'Programming', icon: Code, color: 'text-green-600' },
-    { name: 'Dev', icon: Layers, color: 'text-orange-600' },
-    { name: 'Misc', icon: BookOpen, color: 'text-pink-600' }
-  ];
+interface FolderItemProps {
+  name: string;
+  onClick: () => void;
+}
 
-  const blogPosts: BlogPost[] = [
-    {
-      id: 1,
-      title: 'Understanding Transformers: The Architecture Behind Modern AI',
-      excerpt: 'Deep dive into the transformer architecture that revolutionized natural language processing and machine learning.',
-      category: 'AI/ML',
-      date: 'Oct 5, 2025',
-      readTime: '8 min read',
-      image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80'
+interface NotebookItemProps {
+  name: string;
+  onClick: () => void;
+}
+
+
+// --- MOCK FILE SYSTEM DATA ---
+// This object now conforms to the BlogStructure interface.
+const blogStructure: BlogStructure = {
+  'blogs': {
+    'ml': {
+      'first.ipynb': null,
     },
-    {
-      id: 2,
-      title: 'Mastering React Hooks: A Complete Guide',
-      excerpt: 'Learn how to leverage React Hooks to write cleaner, more efficient functional components.',
-      category: 'Programming',
-      date: 'Oct 4, 2025',
-      readTime: '12 min read',
-      image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80'
+    'DevOps': {
+      'first.ipynb': null,
     },
-    {
-      id: 3,
-      title: 'Building Scalable Microservices with Docker',
-      excerpt: 'Best practices for containerizing applications and orchestrating microservices in production.',
-      category: 'Dev',
-      date: 'Oct 3, 2025',
-      readTime: '10 min read',
-      image: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&q=80'
-    },
-    {
-      id: 4,
-      title: 'The Philosophy of Clean Code',
-      excerpt: 'Exploring the principles that make code maintainable, readable, and elegant.',
-      category: 'Misc',
-      date: 'Oct 2, 2025',
-      readTime: '6 min read',
-      image: 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=800&q=80'
-    },
-    {
-      id: 5,
-      title: 'Fine-tuning LLMs for Domain-Specific Tasks',
-      excerpt: 'Practical strategies for adapting large language models to specialized use cases.',
-      category: 'AI/ML',
-      date: 'Oct 1, 2025',
-      readTime: '15 min read',
-      image: 'https://images.unsplash.com/photo-1676277791608-11f3c1b6d5ca?w=800&q=80'
-    },
-    {
-      id: 6,
-      title: 'TypeScript Design Patterns Every Developer Should Know',
-      excerpt: 'Essential design patterns and their implementation in TypeScript for robust applications.',
-      category: 'Programming',
-      date: 'Sep 30, 2025',
-      readTime: '11 min read',
-      image: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=800&q=80'
+  }
+};
+
+
+const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ path, onNavigate }) => (
+    <nav className="flex items-center space-x-2 text-sm sm:text-base mb-8 text-slate-600">
+        {path.map((segment, index) => (
+            <React.Fragment key={index}>
+                <button
+                    onClick={() => onNavigate(index)}
+                    className="capitalize hover:text-purple-600 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 rounded"
+                >
+                    {segment}
+                </button>
+                {index < path.length - 1 && <ChevronRightIcon />}
+            </React.Fragment>
+        ))}
+    </nav>
+);
+
+const FolderItem: React.FC<FolderItemProps> = ({ name, onClick }) => (
+    <div
+        onClick={onClick}
+        className="text-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer border border-slate-100 flex flex-col justify-center items-center"
+    >
+        <FolderIcon />
+        <h3 className="text-base font-bold text-slate-800 group-hover:text-purple-600 transition-colors">
+            {name}
+        </h3>
+    </div>
+);
+
+const NotebookItem: React.FC<NotebookItemProps> = ({ name, onClick }) => {
+    // Removes the .ipynb extension and replaces underscores/dashes with spaces
+    const title = name.replace(/\.ipynb$/, '').replace(/[_-]/g, ' ');
+    
+    return (
+        <div
+            onClick={onClick}
+            className="text-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer border border-slate-100 flex flex-col justify-center items-center"
+        >
+            <FileIcon />
+            <h3 className="text-base font-bold text-slate-800 group-hover:text-purple-600 transition-colors">
+                {title}
+            </h3>
+        </div>
+    );
+};
+
+// --- MAIN PAGE COMPONENT ---
+const BlogHomepage: React.FC = () => {
+  const [path, setPath] = useState<string[]>(['blogs']);
+  const [viewingNotebook, setViewingNotebook] = useState<string | null>(null);
+
+  // Memoize content calculation to avoid re-computing on every render
+  const currentContent = useMemo((): BlogStructure => {
+    let content: any = blogStructure;
+    for (const segment of path) {
+      if (content && typeof content === 'object') {
+        content = content[segment];
+      } else {
+        return {}; // Should not happen in normal navigation
+      }
     }
-  ];
+    return content as BlogStructure;
+  }, [path]);
 
-  const filteredPosts = blogPosts.filter(post => {
-    const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const handleFolderClick = (folderName: string) => {
+    setPath([...path, folderName]);
+  };
+
+  const handleBreadcrumbNavigate = (index: number) => {
+    setPath(path.slice(0, index + 1));
+  };
+
+  if (viewingNotebook) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800">
+        <Navbar />
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <button
+            onClick={() => setViewingNotebook(null)}
+            className="mb-8 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all"
+          >
+            &larr; Back to Explorer
+          </button>
+          <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900">{[...path, viewingNotebook].join(" / ")}</h1>
+            <NotebookViewer filePath= {[...path, viewingNotebook].join(" / ")}/>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 backdrop-blur-sm bg-white/90">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-2xl font-bold bg-clip-text">
-                Blog
-              </span>
-            </div>
-            {/*Search*/}
-            <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search articles..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent shadow-sm"
-            />
-            </div>
-          </div>
-        </div>
-      </header>
+     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      <Navbar />
+      <section className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4">Blog</h1>
+        <p className="text-lg text-slate-600 mb-8">
+          Explore articles, tutorials, and deep dives.
+        </p>
+        <Breadcrumbs path={path} onNavigate={handleBreadcrumbNavigate} />
 
-      {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Category Filter */}
-        <div className="flex flex-wrap gap-3 mb-12 justify-center">
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.name}
-                onClick={() => setActiveCategory(cat.name)}
-                className={`flex items-center space-x-2 px-5 py-3 rounded-xl font-medium transition-all ${
-                  activeCategory === cat.name
-                    ? 'shadow-lg scale-105'
-                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{cat.name}</span>
-              </button>
-            );
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+          {Object.entries(currentContent).map(([name, content]) => {
+            const isDirectory = content !== null;
+            if (isDirectory) {
+              return <FolderItem key={name} name={name} onClick={() => handleFolderClick(name)} />;
+            }
+            return <NotebookItem key={name} name={name} onClick={() => setViewingNotebook(name)} />;
           })}
         </div>
-
-        {/* Blog Posts Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPosts.slice(1).map((post) => (
-            <article
-              key={post.id}
-              className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer border border-slate-100"
-            >
-              <div className="relative overflow-hidden">
-                <img
-                  src={post.image}
-                  alt={post.title}
-                  className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                <span className="absolute top-4 right-4 px-3 py-1 bg-white rounded-full text-sm font-semibold text-slate-700">
-                  {post.category}
-                </span>
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-purple-600 transition-colors">
-                  {post.title}
-                </h3>
-                <p className="text-slate-600 mb-4 line-clamp-2">
-                  {post.excerpt}
-                </p>
-                <div className="flex items-center justify-between text-sm text-slate-500">
-                  <span>{post.date}</span>
-                  <span>{post.readTime}</span>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {filteredPosts.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-slate-500 text-lg">No articles found matching your search.</p>
-          </div>
-        )}
       </section>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h4 className="font-semibold mb-4">Categories</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">AI/ML</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Programming</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Dev</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Misc</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
