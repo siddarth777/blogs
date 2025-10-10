@@ -17,7 +17,7 @@ export default function BlogViewer({ path }: BlogViewerProps) {
     const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
 
     // Build final URL — works in dev and on GitHub Pages
-    const fileUrl = import.meta.env.BASE_URL + normalizedPath;
+    const fileUrl = "https://siddarth777.github.io/blogs/" + normalizedPath;
 
     console.log("Fetching blog from:", fileUrl);
 

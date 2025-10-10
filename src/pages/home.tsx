@@ -139,7 +139,7 @@ const BlogHomepage: React.FC = () => {
           </button>
           <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
             <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-slate-900">{[...path, viewingNotebook].join(" / ")}</h1>
-            <BlogViewer path={[...path, viewingNotebook].join(" / ")}/>
+            <BlogViewer path={[...path, viewingNotebook].join("/")}/>
           </div>
         </main>
         <Footer />
